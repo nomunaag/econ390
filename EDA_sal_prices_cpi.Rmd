@@ -1,0 +1,436 @@
+---
+title: "EDA_sal_prices_cpi"
+author: "Volodymyr Kotov"
+date: "2023-04-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/Desktop/KSE/Warzone analysis/Data/Cleaned_data")
+```
+
+At this point, we already have datasets on cpi and salaries in IT-sector
+
+salaries are set to real 2017 wages to measure how much would somebody earn if they lived in 2017. This approach should capture the economic activity better than simply comparing wages across time.
+
+# Data description
+
+- Descriptive statistics tables for avg prices, CPI and salaries
+- Histograms or boxplots
+- Line charts to capture changes in time
+- Correlation matrix of all of the variables to salaries
+
+## Libraries to use
+
+```{r}
+
+library(tidyverse)
+library(dplyr)
+library(readxl)
+library(lubridate)
+library(ggplot2)
+library(writexl)
+library(corrplot)
+
+
+```
+
+
+## Upload the data
+
+```{r}
+
+df_cpi <- read_xlsx("cpi_merged_real2017_cleaned.xlsx")
+df_prices <- read_xlsx("prices_goods_services_merged_real2017_cleaned.xlsx")
+df_salaries <- read_xlsx("salaries_merged_real2017_cleaned.xlsx")
+
+```
+
+## salaries 
+
+### descriptive statistics
+
+```{r}
+
+df_salaries$month <- factor(df_salaries$month)
+df_salaries$`Ukraine oblasts` <- factor(df_salaries$`Ukraine oblasts`)
+df_salaries$year <- factor(df_salaries$year)
+df_salaries$division <- factor(df_salaries$division)
+df_salaries$experience <- factor(df_salaries$experience)
+
+summary(df_salaries)
+
+```
+### exchage rate plot
+
+```{r}
+
+ex_rate <- c(7.97,7.90,7.99,7.99,7.99,7.99,11.77,15.77,21.04,24.00,25.17,27.19,26.10,28.10,26.19,27.69,26.17,23.69,26.69,28.27,27.18,27.28,29.25,36.57)
+
+years <- as.Date(sort(unique(df_salaries$year)))
+
+df_ex <- data.frame(years,ex_rate)
+
+ggplot(df_ex, aes(x = years, y = ex_rate)) +
+  geom_line(color = "#0099f9", size = 2) +
+  geom_point(color = "#0099f9", size = 5) +
+  geom_label(
+    aes(label = round(ex_rate,2)),
+     nudge_x = 0.01,
+     nudge_y = 0.01
+   )
+
+```
+
+
+### histograms of real_salary17 on regional level
+
+Show the distribution by year by oblast. So, 25 graphs on one slide (6-11 slides)
+
+Taking only 2017-2022
+
+```{r}
+
+df_sal_slide1 <- df_salaries %>% 
+  filter(., year(year) %in% c(2017:2022))
+
+df_sal_slide1$`Ukraine oblasts` <- as.character(df_sal_slide1$`Ukraine oblasts`)
+
+oblasts <- unique(df_sal_slide1$`Ukraine oblasts`)
+
+#For those, who are interested - the distribution of salaries
+
+
+#years <- unique(year(df_sal_slide1$year))
+
+#for (j in 1:length(years)) {
+  
+#  df_sal_slide1_year <- df_sal_slide1 %>% 
+#    filter(., year(year) == years[j])
+
+ # for (i in 1:length(oblasts)) {
+      
+#      df_salaries1 <- df_sal_slide1_year %>% 
+#        filter(., `Ukraine oblasts` == oblasts[i])
+      
+#      df_salaries2 <- quantile(df_salaries1$real_hrvn_sal17,na.rm = T,probs = c(0.025,0.975))
+  
+#      df_salaries1 <- df_salaries1[
+#        (df_salaries1$real_hrvn_sal17 > df_salaries2[1]) & (df_salaries1$real_hrvn_sal17 < df_salaries2[2]),]
+      
+ #     options(scipen = 999)
+      
+#      graph1 <- hist(df_salaries1$real_hrvn_sal17,
+#                      main=paste("Rough distribution of salaries in",years[j]),
+#                      xlab=paste("salaries in",oblasts[i],"oblast"),
+#                      col="chocolate",
+#                      border="black"
+#                      )
+#      graph1
+#  }
+#}
+
+
+
+df_salaries1_1 <- df_sal_slide1 %>% 
+  dplyr::select(c("year","Ukraine oblasts","real_hrvn_sal17"))
+
+  
+  for (i in 1:length(oblasts)) {
+        
+    
+        df_salaries1 <- df_salaries1_1 %>% 
+          filter(., `Ukraine oblasts` == oblasts[i])
+  
+        df_salaries1 <- df_salaries1 %>% 
+          dplyr::select(!c("Ukraine oblasts"))
+  
+        df_salaries2 <- quantile(df_salaries1$real_hrvn_sal17,na.rm = T,probs = c(0.025,0.975))
+    
+        df_salaries1 <- df_salaries1[
+          (df_salaries1$real_hrvn_sal17 > df_salaries2[1]) & (df_salaries1$real_hrvn_sal17 < df_salaries2[2]),]
+        
+        options(scipen = 999)
+        
+        boxplot(real_hrvn_sal17~year(year),
+              data=df_salaries1,
+              main=paste("Rough distribution of salaries in",oblasts[i],"oblast"),
+                      xlab=paste("salaries in",oblasts[i],"oblast"),
+                      ylab="real salaries by year",              
+                      col="chocolate",
+                      border="black"
+              )
+  }
+
+
+```
+# Test the hypothesis if people migrated from Central/ Eastern/Southern regions to Western regions? Did the proportion of respondents change? (# of observes. Lviv / total observations). How did this metric change over time? What about 2019? What about 2022?
+
+```{r}
+
+df_sal_slide2 <- df_sal_slide1
+
+df_sal_slide2 <- df_sal_slide2 %>% 
+  dplyr::select(.,c("year","Ukraine oblasts","real_hrvn_sal17"))
+
+df_grp_oblast = df_sal_slide2 %>% group_by(year, `Ukraine oblasts`)  %>%
+                    summarise(total_obs = n(),
+                              .groups = 'drop')
+
+df_grp_year = df_sal_slide2 %>% group_by(year)  %>%
+                    summarise(total_obs_year = n(),
+                              .groups = 'drop')
+df_grp_merged <- merge(df_grp_oblast,df_grp_year,
+                       by = "year", all.x = TRUE)
+
+df_grp_merged$percent <- round(with(df_grp_merged, total_obs/total_obs_year),2)
+
+df_grp_merged1 <- df_grp_merged %>% pivot_wider(
+  names_from = "year",
+  values_from= c("total_obs", "total_obs_year", "percent")
+)
+
+```
+
+## Do we have any affect on the experience variable in this case?
+Test the hypothesis, that salaries decreased more for juniors (0-3 years) rather than for more experienced employees. (14 slide)
+
+```{r}
+
+df_sal_slide3 <- df_sal_slide1
+
+df_sal_slide3 <- df_sal_slide3 %>% 
+  dplyr::select(.,c("year","experience","real_hrvn_sal17"))
+
+df_sal_slide3 <- na.omit(df_sal_slide3)
+
+df_grp_experience = df_sal_slide3 %>% group_by(year, experience)  %>%
+                    summarise(mean_sal_group = mean(real_hrvn_sal17),
+                              .groups = 'drop')
+
+```
+
+```{r}
+
+ggplot(data=df_grp_experience, aes(x=year, y=mean_sal_group, group=experience))+
+       geom_line()+
+       geom_point(size=3)+
+       labs(x="time",y="mean salary")+
+       ggtitle("Mean salaries by experience group") +
+        geom_line(aes(color=experience))
+
+```
+Answer to the question:
+
+Most probably, we have an increase in salaries because of the fact that CPI, that was taken as a discounting factor is a lagged variable, what means that we have a dramatic increase in the exchange rate, what made the real salaries to grow, but the CPI increase was not so tramandous. For example, a person had to purchase a Milka bar chocolate for 100 hryvnas in 2017, but now it costs 120 hryvnas. However, assume that that person earned 100 dollars, so 2500 hryvnas, because of the exchange rate. Now, the person earns 100 dollars as well, but in the local currency it is 3700 hryvnas. 100/2500 > 120/3700. 0.04 > 0.03. It makes us think that the CPI is a lagged variable that is actually responds to a shock with some delay. However, the exchange rate adjusts to the shock much faster.
+
+What about the number of responses? Testing the hypothesis, that we have a decline in the number of juniors on the market.
+
+```{r}
+
+df_grp_experience1 = df_sal_slide3 %>% group_by(year, experience)  %>%
+                      summarise(total_group_obs = n(),
+                                .groups = 'drop')
+
+```
+### absolute values:
+
+```{r}
+
+ggplot(data=df_grp_experience1, aes(x=year, y=total_group_obs, group=experience))+
+       geom_line()+
+       geom_point(size=3)+
+       labs(x="time",y="Total observations")+
+       ggtitle("Total responses by experience group") +
+        geom_line(aes(color=experience))
+
+```
+
+### relative values:
+
+```{r}
+
+df_grp_experience2d = df_sal_slide3 %>% group_by(year)  %>%
+                      summarise(total_obs_year = n(),
+                                .groups = 'drop')
+
+df_exp_merged <- merge(df_grp_experience2d,df_grp_experience1,
+                       by = "year")
+
+df_exp_merged$rel_vals <- with(df_exp_merged, total_group_obs/total_obs_year)
+
+ggplot(data=df_exp_merged, aes(x=year, y=rel_vals, group=experience))+
+       geom_line()+
+       geom_point(size=3)+
+       labs(x="time",y="Total observations")+
+       ggtitle("Total responses by experience group") +
+        geom_line(aes(color=experience))
+
+```
+
+
+According to the graphs, we can make a conclusion that the most affected group is 10+ years group, as it had the most significant decrease in salaries as well as the share in the number of responses.
+
+There might be two factors:
+- The more experienced people had enough money to start a new career abroad.
+- The more experienced people could have started working on somehow similar positions by decreasing the experience in the relative field (for example, we can see that the share of the group 7-10 years significantly increased in 2022).
+- It also be possible that a lot of people who were employed are no more employed. So the number of respondents is driving the labor market.
+- Private sector gets calls. 
+
+# CPI 
+
+### description
+
+
+```{r}
+
+df_cpi_merge <- df_cpi %>% 
+  dplyr::select(., !c("January","February","March","April","May","June","July","August","September","October","November","December"))
+
+df_cpi_merge$`Ukraine oblasts` <- case_when(
+  df_cpi_merge$`Ukraine oblasts` == "Vinnytsya" ~ "Vinnytska",
+  df_cpi_merge$`Ukraine oblasts` == "Volyn" ~ "Volynska",
+  df_cpi_merge$`Ukraine oblasts` == "Dnipropetrovsk" ~ "Dnipropetrovska",
+  df_cpi_merge$`Ukraine oblasts` == "Dnipropetrosk" ~ "Dnipropetrovska",
+  df_cpi_merge$`Ukraine oblasts` == "Donetsk" ~ "Donetska",
+  df_cpi_merge$`Ukraine oblasts` == "Zhytomyr" ~ "Zhytomyrska",
+  df_cpi_merge$`Ukraine oblasts` == "Zakarpattya" ~ "Zakarpatska",
+  df_cpi_merge$`Ukraine oblasts` == "Zaporizhzhya" ~ "Zaporizka",
+  df_cpi_merge$`Ukraine oblasts` == "Ivano-Frankivsk" ~ "Ivano-Frankivska",
+  df_cpi_merge$`Ukraine oblasts` == "Ivano-Frankisk" ~ "Ivano-Frankivska",
+  df_cpi_merge$`Ukraine oblasts` == "Kyiv" ~ "Kyivska",
+  df_cpi_merge$`Ukraine oblasts` == "Kirovohrad" ~ "Kirovohradska",
+  df_cpi_merge$`Ukraine oblasts` == "Luhansk" ~ "Luhanska",
+  df_cpi_merge$`Ukraine oblasts` == "Lviv" ~ "Lvivska",
+  df_cpi_merge$`Ukraine oblasts` == "Mykolayiv" ~ "Mykolaivska",
+  df_cpi_merge$`Ukraine oblasts` == "Odesa" ~ "Odeska",
+  df_cpi_merge$`Ukraine oblasts` == "Poltava" ~ "Poltavska",
+  df_cpi_merge$`Ukraine oblasts` == "Rivne" ~ "Rivnenska",
+  df_cpi_merge$`Ukraine oblasts` == "Sumy" ~ "Sumska",
+  df_cpi_merge$`Ukraine oblasts` == "Ternopyl" ~ "Ternopilska",
+  df_cpi_merge$`Ukraine oblasts` == "Kharkiv" ~ "Kharkivska",
+  df_cpi_merge$`Ukraine oblasts` == "Kherson" ~ "Khersonska",
+  df_cpi_merge$`Ukraine oblasts` == "Khmelnytskiy" ~ "Khmelnytska",
+  df_cpi_merge$`Ukraine oblasts` == "Cherkasy" ~ "Cherkaska",
+  df_cpi_merge$`Ukraine oblasts` == "Chernivtsi" ~ "Chernivetska",
+  df_cpi_merge$`Ukraine oblasts` == "Chernihiv" ~ "Chernihivska",
+  df_cpi_merge$`Ukraine oblasts` == "Kyiv city" ~ "Kyiv city",
+  df_cpi_merge$`Ukraine oblasts` == "Autonomous Republic of Crimea" ~ NA,
+  df_cpi_merge$`Ukraine oblasts` == "Sevastopol city" ~ NA,
+  df_cpi_merge$`Ukraine oblasts` == "AGGREGATED" ~ NA,
+  df_cpi_merge$`Ukraine oblasts` == "Aggregate" ~ NA,
+  df_cpi_merge$`Ukraine oblasts` == "AGGREGATE" ~ NA,
+  df_cpi_merge$`Ukraine oblasts` == "Ukraine" ~ NA,
+  .default = as.character(df_cpi_merge$`Ukraine oblasts`) 
+)
+```
+
+```{r}
+
+df_cpi_merge <- na.omit(df_cpi_merge)
+
+df_sal_slide4 <- na.omit(df_sal_slide2)
+
+df_sal_slide4 <- df_sal_slide4 %>% 
+  group_by(year, `Ukraine oblasts`) %>% 
+  summarise(mean_sal = mean(real_hrvn_sal17),.groups = "drop")
+
+df_sal_slide4$year_ex <- df_sal_slide4$year
+
+```
+
+```{r}
+
+df_sal_slide4$year <- as.Date(paste(as.character(year(df_sal_slide4$year)),"-01-01",sep=""))
+
+```
+
+```{r}
+
+df_sal_slide4$year_ex <- as.Date(df_sal_slide4$year_ex, "%d-%m-%Y")
+
+df_sal_slide4$MonthName <- format(df_sal_slide4$year_ex, "%B")
+
+```
+
+```{r}
+
+df_sal_slide4 <- df_sal_slide4 %>% 
+  dplyr::select(., !c("year_ex"))
+
+```
+
+```{r}
+
+df_sal_slide4 <- df_sal_slide4 %>% 
+  pivot_wider(
+    names_from = MonthName,
+    values_from = mean_sal
+  )
+
+df_merge_slide4 <- merge(df_sal_slide4,df_cpi_merge,
+                         by = c("year","Ukraine oblasts"))
+
+df_cor_check <- df_merge_slide4 %>% dplyr::select(!c("Ukraine oblasts","year"))
+
+#df_cor_check <- cor(df_cor_check)
+
+#corrplot(df_cor_check, method = 'shade', order = 'AOE', diag = FALSE)
+
+```
+December (salary) is our variable of interest. However, as we can see, it is pretty correlated with the values because the formula of the calculation of the salary includes cpi in itself. Also, we can see that the CPI variable is pretty autocorrelated, but defining the lag exceeds the area of interest.
+
+### plotting CPI
+
+```{r}
+
+df_merge_slide5 <- df_merge_slide4
+
+```
+
+#### For Kyiv city
+
+```{r}
+
+df_merge_slide5_Kyiv <- df_merge_slide5 %>% 
+  filter(`Ukraine oblasts` == "Kyiv city")
+
+plot1 <- ggplot(data=df_merge_slide5_Kyiv, aes(x=year, y=June))+
+       geom_line()+
+       geom_point(size=3)+
+       labs(x="time",y="Mean real salary in June in hryvna for Kyiv city")
+
+```
+
+```{r}
+
+#df_cpi_merge_2Kyiv <- df_cpi_merge_2 %>% 
+#  filter(.,(`Ukraine oblasts` == "Kyiv city") & (year(date) > 2016))
+
+
+#plot2 <- ggplot(data=df_cpi_merge_2Kyiv, aes(x=date, y=cpi_monthly))+
+#       geom_line()+
+#       geom_point(size=3)+
+#       labs(x="time",y="CPI for Kyiv city")
+
+#ggarrange(plot1, plot2, ncol = 2, nrow = 1)
+
+```
+
+```{r}
+
+# salaries in the period of 2021 June - 2022 June
+((69000-62500) * 100) / 69000
+
+# CPI in the period of 2021 June - 2022 June
+((154-125)  *  100) / 125
+
+
+# CPI all over the time
+((154 - 30) * 100)  / 30
+
+# salaries all over the time
+(69000 - 48000) * 100 / 48000
+
+```
