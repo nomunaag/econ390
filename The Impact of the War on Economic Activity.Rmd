@@ -1,0 +1,43 @@
+---
+title: "The Impact of the War on Economic Activity"
+author: "Jachin Friday, Nomunaa Ganbold, Volodomyr Kotov, Kiril Terentii, Milan Vannik"
+date: "April 18, 2023"
+output: html_document
+---
+
+## 1. Introduction
+
+-Background for the Ukraine War and its impact on broader economic variables
+
+
+## 2. Background
+
+-Prior research that has been done in this area, where this research falls short, and how we expect to be able to add to it
+
+## 3. Model
+
+- An theoretical model about the impact of war activities on wages, built from macroeconomic principles
+
+## 4. Empirical Approach
+
+- how to translate the theoretical model into empirical results
+
+## 5. Data
+
+-description of the data sources that we used as well as the methods used to clean them
+
+## 6. Results
+
+- results from the regressions/quantitative techniques that we used, limitations encountered with quality of the data 
+
+## 7. Conclusion
+
+- views that we have come to as a result of this analysis and pointing the way toward further research
+
+## 8. Appendix
+
+-any extra tables, charts, and graphs produced by the EDA that we can use as part of our report
+
+## 9. Sources
+
+-the sources that we pulled from for our analysis
