@@ -278,6 +278,34 @@ There might be two factors:
 - It also be possible that a lot of people who were employed are no more employed. So the number of respondents is driving the labor market.
 - Private sector gets calls. 
 
+
+## Linear Regression
+
+```{r}
+df_salaries_regression <- df_salaries[c("Ukraine oblasts", "year", "division", "experience", "real_sal17")]
+```
+
+```{r}
+library(plm)
+library(lmtest)
+
+fixed <- plm(real_sal17 ~ .,
+                   data =df_salaries_regression,
+                   index = c("experience", "year"),
+                   model = "within",
+                   effect = "twoways")
+summary(fixed)
+coeftest(fixed)
+```
+
+
+```{r}
+linear_model <- lm(real_sal17 ~ . - 1, data = df_salaries_regression)
+summary(linear_model)
+```
+
+Unfortunately, even with the inclusion of all the non-salary related variables in the model, the linear regression performs poorly with only an R-squared of .1902. Interpreting each coefficient in this model is fruitless because a) there are so many possible outcomes for each of the categorical variables and b) as a result, virtually everything is significant.
+
 # CPI 
 
 ### description
