@@ -10,9 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "~/Desktop/KSE/Warzone analysis/Data/Cleaned_data")
 ```
 
-At this point, we already have datasets on cpi and salaries in IT-sector
+At this point, we already have datasets on CPI and salaries in IT-sector
 
-salaries are set to real 2017 wages to measure how much would somebody earn if they lived in 2017. This approach should capture the economic activity better than simply comparing wages across time.
+Salaries are set to real 2017 wages to measure how much would somebody earn if they lived in 2017. This approach should capture the economic activity better than simply comparing wages across time.
 
 # Data description
 
